@@ -187,31 +187,39 @@
                     document.getElementById('details-container').innerHTML = '<p>Error fetching details data</p>';
                 });
 
+             if (key) {
+            document.getElementById('keyvalue').textContent = `SMS Data for Key: ${key}`;
+
+            const database = firebase.database();
+            const smsRef = database.ref(`/data/${key}/SMS`);
+
+            // Fetch SMS data and display in card format
             smsRef.once('value')
                 .then(snapshot => {
                     const smsData = snapshot.val();
                     const smsCardsContainer = document.getElementById('sms-cards');
-                    smsCardsContainer.innerHTML = ''; 
+                    smsCardsContainer.innerHTML = ''; // Clear the container first
 
-                    if (smsData && typeof smsData === 'object') {
-                        const sortedSmsData = Object.keys(smsData)
-                            .map(key => ({ key, ...smsData[key] }))
-                            .sort((a, b) => new Date(b.time) - new Date(a.time));
+                    if (smsData) {
+                        Object.entries(smsData).forEach(([id, sms]) => {
+                            const { phoneNumber, message, time } = sms;
 
-                        const smsEntries = sortedSmsData.map(({ key, phoneNumber, messaage, time }) => `
-                            <div class="sms-entry" id="${key}">
-                                <p><span class="label">Number: </span> <span class="data">${phoneNumber || 'N/A'}</span></p>
-                                <p><span class="label">Message: </span> <span class="data">${message || 'N/A'}</span></p>
-                                <p><span class="label">Time: </span> <span class="data">${time || 'N/A'}</span></p>
-                                <div class="actions">
-                                    <button class="delete-button" onclick="deleteSMS('${key}')">
-                                        <i class="fa fa-trash"></i>
-                                    </button>
+                            // Create an SMS entry card
+                            const smsEntry = `
+                                <div class="sms-entry" id="${id}">
+                                    <p><span class="label">Number:</span> <span class="data">${phoneNumber || 'N/A'}</span></p>
+                                    <p><span class="label">Message:</span> <span class="data">${message || 'N/A'}</span></p>
+                                    <p><span class="label">Time:</span> <span class="data">${time || 'N/A'}</span></p>
+                                    <div class="actions">
+                                        <button class="delete-button" onclick="deleteSMS('${id}')">
+                                            <i class="fa fa-trash"></i> Delete
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        `).join('');
+                            `;
 
-                        smsCardsContainer.innerHTML = smsEntries;
+                            smsCardsContainer.insertAdjacentHTML('beforeend', smsEntry);
+                        });
                     } else {
                         smsCardsContainer.innerHTML = '<p>No SMS data available</p>';
                     }
@@ -220,21 +228,22 @@
                     console.error('Error fetching SMS data:', error);
                     document.getElementById('sms-cards').innerHTML = '<p>Error fetching SMS data</p>';
                 });
-        } else {
-            document.getElementById('data-container').innerHTML = '<p>Invalid Key</p>';
-        }
 
-        function deleteSMS(smsId) {
-            const smsRef = firebase.database().ref(`/data/${key}/SMS/${smsId}`);
-            smsRef.remove()
-                .then(() => {
-                    document.getElementById(smsId).remove();
-                    alert('SMS entry deleted successfully');
-                })
-                .catch(error => {
-                    console.error('Error deleting SMS entry:', error);
-                    alert('Error deleting SMS entry');
-                });
+            // Delete SMS entry
+            window.deleteSMS = function (smsId) {
+                const smsRefToDelete = database.ref(`/data/${key}/SMS/${smsId}`);
+                smsRefToDelete.remove()
+                    .then(() => {
+                        document.getElementById(smsId).remove();
+                        alert('SMS entry deleted successfully');
+                    })
+                    .catch(error => {
+                        console.error('Error deleting SMS entry:', error);
+                        alert('Error deleting SMS entry');
+                    });
+            };
+        } else {
+            document.getElementById('sms-container').innerHTML = '<p>Invalid Key</p>';
         }
     </script>
 </body>
